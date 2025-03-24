@@ -11,7 +11,7 @@ import {
   DialogActions,
   Box,
 } from "@mui/material";
-import supabase from "../../utils/supabase";
+import { supabase } from "../../utils/supabase";
 
 interface LoginDialogProps {
   open: boolean;

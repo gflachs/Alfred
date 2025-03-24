@@ -7,7 +7,7 @@ const MainPage: React.FC = () => {
   const [deviceConnected, setDeviceConnected] = useState(false); // Mock-Status
 
   return (
-    <Box sx={{ p: 4 }}>
+    <Box sx={{ p: 1 }}>
       <Typography variant="h4" align="center" gutterBottom>
         Willkommen bei Alfred
       </Typography>
