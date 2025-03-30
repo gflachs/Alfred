@@ -3,6 +3,12 @@ import { getActivityLabel, calculateDuration } from "./activityUtils";
 import { Bed, Chair, DirectionsRun } from "@mui/icons-material";
 import React, { ReactNode } from "react";
 
+/**
+ * Ermittelt die aktuelle Aktivität basierend auf der aktuellen Zeit.
+ * @param {MovementData[]} data - Array von Bewegungsdaten
+ * @param {Date} currentTime - Aktuelle Zeit
+ * @returns {string} Die aktuelle Aktivität oder "Unbekannt"
+ */
 export const getCurrentActivity = (data: MovementData[], currentTime: Date) => {
   const currentEntry = data.find(
     (entry) =>
@@ -14,6 +20,12 @@ export const getCurrentActivity = (data: MovementData[], currentTime: Date) => {
     : "Unbekannt";
 };
 
+/**
+ * Berechnet die tägliche Zusammenfassung der Aktivitäten für ein bestimmtes Datum.
+ * @param {MovementData[]} data - Array von Bewegungsdaten
+ * @param {Date} selectedDate - Ausgewähltes Datum
+ * @returns {{ Liegen: number, Sitzen: number, Aktiv: number }} Zusammenfassung der Stunden pro Aktivität
+ */
 export const getDailySummary = (data: MovementData[], selectedDate: Date) => {
   const summary = { Liegen: 0, Sitzen: 0, Aktiv: 0 };
   data.forEach((entry) => {
@@ -26,6 +38,11 @@ export const getDailySummary = (data: MovementData[], selectedDate: Date) => {
   return summary;
 };
 
+/**
+ * Erstellt eine motivierende Nachricht basierend auf der täglichen Aktivität.
+ * @param {{ Liegen: number, Sitzen: number, Aktiv: number }} summary - Tägliche Aktivitätszusammenfassung
+ * @returns {string} Motivationsnachricht
+ */
 export const getMotivationalMessage = (summary: {
   Liegen: number;
   Sitzen: number;
@@ -61,6 +78,11 @@ export const getMotivationalMessage = (summary: {
   );
 };
 
+/**
+ * Gibt ein Icon für die Aktivität zurück.
+ * @param {string} type - Aktivitätstyp (Liegen, Sitzen, Aktiv)
+ * @returns {ReactNode} Icon-Komponente oder null
+ */
 export const getActivityIcon = (type: string): ReactNode => {
   switch (type) {
     case "Liegen":
@@ -74,6 +96,12 @@ export const getActivityIcon = (type: string): ReactNode => {
   }
 };
 
+/**
+ * Berechnet die durchschnittlichen aktiven Stunden über eine bestimmte Anzahl von Tagen.
+ * @param {MovementData[]} data - Array von Bewegungsdaten
+ * @param {number} days - Anzahl der Tage für den Durchschnitt
+ * @returns {string} Durchschnittliche aktive Stunden als String (z. B. "2.5")
+ */
 export const getAverageActiveHours = (data: MovementData[], days: number) => {
   const endDate = new Date();
   const startDate = new Date();
@@ -95,7 +123,13 @@ export const getAverageActiveHours = (data: MovementData[], days: number) => {
     : "0.0";
 };
 
-// Neue Funktion: Durchschnittliche Stunden pro Woche berechnen
+/**
+ * Berechnet die wöchentlichen Durchschnittswerte für Aktivitäten.
+ * @param {MovementData[]} data - Array von Bewegungsdaten
+ * @param {Date} startDate - Startdatum der Woche
+ * @param {Date} endDate - Enddatum der Woche
+ * @returns {{ Liegen: number, Sitzen: number, Aktiv: number }} Durchschnittswerte pro Aktivität
+ */
 export const getWeeklyAverages = (
   data: MovementData[],
   startDate: Date,
@@ -125,7 +159,15 @@ export const getWeeklyAverages = (
   };
 };
 
-// Neue Funktion: Trend zur Vorwoche berechnen
+/**
+ * Berechnet den Trend der aktuellen Woche im Vergleich zur Vorwoche.
+ * @param {MovementData[]} data - Array von Bewegungsdaten
+ * @param {Date} currentWeekStart - Start der aktuellen Woche
+ * @param {Date} currentWeekEnd - Ende der aktuellen Woche
+ * @param {Date} previousWeekStart - Start der Vorwoche
+ * @param {Date} previousWeekEnd - Ende der Vorwoche
+ * @returns {{ Liegen: number, Sitzen: number, Aktiv: number }} Differenz der Durchschnittswerte
+ */
 export const getWeeklyTrend = (
   data: MovementData[],
   currentWeekStart: Date,
@@ -150,4 +192,6 @@ export const getWeeklyTrend = (
     Aktiv: currentAverages.Aktiv - previousAverages.Aktiv,
   };
 };
+
+/** Re-Export der calculateDuration-Funktion aus activityUtils */
 export { calculateDuration };

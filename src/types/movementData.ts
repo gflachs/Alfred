@@ -6,6 +6,11 @@ export interface MovementData {
   user_id?: string; // Optional, da RLS das filtert
 }
 
+export interface MovementType {
+  idMovementType: number;
+  MovementType: string;
+}
+
 export const mockMovementData: MovementData[] = [
   // 14. März 2025
   // 00:00 - 06:00 (Nacht, hauptsächlich Liegen)

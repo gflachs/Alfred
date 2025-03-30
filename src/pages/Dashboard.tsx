@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Box, Typography, Stack, Grid, useMediaQuery } from "@mui/material";
 import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { de } from "date-fns/locale";
 import { FormControl, InputLabel, Select, MenuItem } from "@mui/material";
-import { mockMovementData } from "../types/movementData";
+import { MovementData } from "../types/movementData";
 import { hasDataForDate } from "../utils/activityUtils";
 import {
   getCurrentActivity,
@@ -18,22 +18,52 @@ import ActivityMetrics from "../components/dashboard/ActivityMetrics";
 import HourlyActivity from "../components/data/HourlyActivity";
 import WeeklyActivity from "../components/data/WeeklyActivity";
 import MonthlyActivity from "../components/data/MonthlyActivity";
+import { BluetoothService } from "../services/bluetooth";
 
-const Dashboard: React.FC = () => {
+const bluetoothService = BluetoothService.getInstance();
+
+/** Props für die Dashboard-Komponente */
+interface DashboardProps {
+  useMockData: boolean;
+  movementData: MovementData[];
+}
+
+/**
+ * Eine React-Komponente, die ein Dashboard mit Aktivitätsübersicht und Datenvisualisierung anzeigt.
+ * @param {DashboardProps} props - Eigenschaften der Komponente
+ * @returns {JSX.Element} Das gerenderte Dashboard
+ */
+const Dashboard: React.FC<DashboardProps> = ({
+  useMockData,
+  movementData,
+}: DashboardProps) => {
   const [view, setView] = useState<"hourly" | "weekly" | "monthly">("hourly");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [isConnected] = useState(true); // Platzhalter für Bluetooth-Verbindung
+  const [isConnected, setIsConnected] = useState(
+    bluetoothService.isBluetoothDeviceConnected()
+  );
+  const [isSubscribed, setIsSubscribed] = useState(false);
+
+  // Abonnieren des Bluetooth-Verbindungsstatus
+  useEffect(() => {
+    if (!isSubscribed) {
+      console.log("Subscribing to MovementData");
+      bluetoothService.subscribeToConnectionStatus(setIsConnected);
+      setIsSubscribed(true); // Verhindert Mehrfachabonnements
+    }
+  }, [isSubscribed, useMockData]);
 
   const isMobile = useMediaQuery("(max-width:600px)");
 
-  const currentActivity = getCurrentActivity(mockMovementData, new Date());
-  const dailySummary = getDailySummary(mockMovementData, new Date());
-  const motivationalMessage = getMotivationalMessage(dailySummary);
-
-  const recentActivities = mockMovementData.filter(
+  // Filtere Aktivitäten des aktuellen Tages
+  const recentActivities = movementData.filter(
     (entry) =>
       new Date(entry.startedAt).toDateString() === new Date().toDateString()
   );
+
+  const currentActivity = getCurrentActivity(movementData, new Date());
+  const dailySummary = getDailySummary(movementData, new Date());
+  const motivationalMessage = getMotivationalMessage(dailySummary);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
@@ -57,18 +87,16 @@ const Dashboard: React.FC = () => {
           </Typography>
         </Stack>
 
-        {/* Connection Status */}
+        {/* Verbindungsstatus */}
         <Box sx={{ display: "flex", justifyContent: "center", mb: 5 }}>
           <Box
             sx={{ width: { xs: "100%", sm: "80%", md: "50%" }, maxWidth: 400 }}
           >
-            <ConnectionStatus
-              isConnected={isConnected}
-              lastUpdated={new Date().toLocaleTimeString()}
-            />
+            <ConnectionStatus isConnected={isConnected} />
           </Box>
         </Box>
 
+        {/* Aktivitätszusammenfassung */}
         <Box
           sx={{
             width: "100%",
@@ -86,9 +114,9 @@ const Dashboard: React.FC = () => {
           </Box>
         </Box>
 
-        {/* Main Grid */}
+        {/* Hauptlayout mit Grid */}
         <Grid container spacing={4}>
-          {/* Letzte Aktivitäten und Metriken in einer Box (Desktop) */}
+          {/* Metriken und Aktivitätslog */}
           <Grid item xs={12} md={4}>
             <Box
               sx={{
@@ -105,7 +133,7 @@ const Dashboard: React.FC = () => {
                 sx={{ alignItems: "center" }}
               >
                 <Box sx={{ width: "100%", maxWidth: 500 }}>
-                  <ActivityMetrics data={mockMovementData} />
+                  <ActivityMetrics data={movementData} />
                 </Box>
                 <Box sx={{ width: "100%", maxWidth: 500 }}>
                   <ActivityLog activities={recentActivities} />
@@ -114,7 +142,7 @@ const Dashboard: React.FC = () => {
             </Box>
           </Grid>
 
-          {/* Chart & Date Filter */}
+          {/* Datenvisualisierung mit Filter */}
           <Grid item xs={12} md={8}>
             <Box
               sx={{
@@ -124,6 +152,7 @@ const Dashboard: React.FC = () => {
                 boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
               }}
             >
+              {/* Ansichtsauswahl und Datumspicker */}
               <Stack
                 direction={isMobile ? "column" : "row"}
                 spacing={2}
@@ -169,25 +198,27 @@ const Dashboard: React.FC = () => {
                       : ["year", "month"]
                   }
                   shouldDisableDate={(date) =>
-                    !hasDataForDate(mockMovementData, date, view)
+                    !hasDataForDate(movementData, date, view)
                   }
                 />
               </Stack>
+
+              {/* Bedingte Anzeige der Visualisierung basierend auf Ansicht */}
               {view === "hourly" && (
                 <HourlyActivity
-                  data={mockMovementData}
+                  data={movementData}
                   selectedDate={selectedDate}
                 />
               )}
               {view === "weekly" && (
                 <WeeklyActivity
-                  data={mockMovementData}
+                  data={movementData}
                   selectedDate={selectedDate}
                 />
               )}
               {view === "monthly" && (
                 <MonthlyActivity
-                  data={mockMovementData}
+                  data={movementData}
                   selectedDate={selectedDate}
                 />
               )}

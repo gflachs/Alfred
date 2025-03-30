@@ -37,43 +37,60 @@ const EmergencyAlertDialog: React.FC<EmergencyAlertDialogProps> = ({
   const [countdown, setCountdown] = useState(10); // Countdown von 10 Sekunden
   const [isCancelled, setIsCancelled] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [audio] = useState(new Audio("/alarm.ogg")); // Warnton laden
-
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null); // Warnton laden
   useEffect(() => {
     if (!open) {
       setCountdown(10);
       setIsCancelled(false);
       setIsSending(false);
-      audio.pause(); // Stoppe den Ton, wenn der Dialog geschlossen wird
-      audio.currentTime = 0; // Setze den Ton auf den Anfang zurück
+      if (audio) {
+        audio.pause(); // Stoppe den Ton, wenn der Dialog geschlossen wird
+        audio.currentTime = 0; // Setze den Ton auf den Anfang zurück
+      }
+      setAudio(null);
+
       if ("vibrate" in navigator) {
         navigator.vibrate(0); // 0 stoppt die Vibration
       }
       return;
+    } else if (!audio) {
+      setAudio(new Audio("/alarm.ogg"));
     }
 
     // Spiele den Warnton ab, wenn der Dialog geöffnet wird
-    audio.loop = true; // Spiele den Ton in einer Schleife
-    audio.play().catch((error) => {
-      console.error("Fehler beim Abspielen des Warntons:", error);
-    });
+    if (audio) {
+      audio.loop = true; // Spiele den Ton in einer Schleife
 
+      audio.play().catch((error) => {
+        console.error("Fehler beim Abspielen des Warntons:", error);
+      });
+    }
+    let vibrationInterval: NodeJS.Timeout;
     if ("vibrate" in navigator) {
       // Vibrationsmuster: 500ms Vibration, 500ms Pause, wiederholt
       const pattern = [500, 500];
-      navigator.vibrate(pattern);
+      //start a repeating vibration, with an interval of 500ms
+      vibrationInterval = setInterval(() => {
+        navigator.vibrate(pattern);
+        if (isCancelled) {
+          //cancel the interval after 1000ms
+          clearInterval(vibrationInterval);
+          navigator.vibrate(0);
+        }
+      }, 1000);
     } else {
       console.warn("Vibration API wird auf diesem Gerät nicht unterstützt.");
     }
 
     const timer = setInterval(() => {
       setCountdown((prev) => {
-        if (prev <= 1) {
+        if (prev == 0) {
           clearInterval(timer);
           if (!isCancelled) {
+            clearInterval(vibrationInterval);
             handleSendSMS();
           }
-          return 0;
+          return -1;
         }
         return prev - 1;
       });
@@ -81,8 +98,10 @@ const EmergencyAlertDialog: React.FC<EmergencyAlertDialogProps> = ({
 
     return () => {
       clearInterval(timer);
-      audio.pause(); // Stoppe den Ton, wenn der Dialog unmountet wird
-      audio.currentTime = 0;
+      if (audio) {
+        audio.pause(); // Stoppe den Ton, wenn der Dialog unmountet wird
+        audio.currentTime = 0;
+      }
       if ("vibrate" in navigator) {
         navigator.vibrate(0);
       }
@@ -91,8 +110,10 @@ const EmergencyAlertDialog: React.FC<EmergencyAlertDialogProps> = ({
 
   const handleSendSMS = async () => {
     setIsSending(true);
-    audio.pause(); // Stoppe den Ton, während die SMS gesendet werden
-    audio.currentTime = 0;
+    if (audio) {
+      audio.pause(); // Stoppe den Ton, während die SMS gesendet werden
+      audio.currentTime = 0;
+    }
 
     if ("vibrate" in navigator) {
       navigator.vibrate(0);
@@ -100,6 +121,8 @@ const EmergencyAlertDialog: React.FC<EmergencyAlertDialogProps> = ({
 
     let successfulSends = 0;
     const failedSends: string[] = [];
+
+    console.log("Sende Notfall-SMS an Kontakte:", contacts);
 
     for (const contact of contacts) {
       const { success } = await sendSMS(
@@ -139,8 +162,10 @@ const EmergencyAlertDialog: React.FC<EmergencyAlertDialogProps> = ({
 
   const handleCancel = () => {
     setIsCancelled(true);
-    audio.pause(); // Stoppe den Ton, wenn abgebrochen wird
-    audio.currentTime = 0;
+    if (audio) {
+      audio.pause(); // Stoppe den Ton, wenn abgebrochen wird
+      audio.currentTime = 0;
+    }
     if ("vibrate" in navigator) {
       navigator.vibrate(0);
     }
