@@ -4,6 +4,10 @@ This project was developed as part of the "Big Data" module at the University of
 
 An deployed version of the project can be found at [https://alfred.gregorflachs.de](https://alfred.gregorflachs.de).
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/4e6e4e56-f1c2-4eb4-adcc-f41177ff411c" alt="AlfredLogo" width="500">
+</p>
+
 ## Overview
 
 The project combines a PWA web application built with React and TypeScript (using Vite) with an Arduino-based TinyML solution. The Arduino Nano 33 BLE Sense collects sensor data, processes it with an Edge Impulse machine learning model, and communicates via Bluetooth Low Energy. The web app provides a user interface to monitor activities, manage emergency contacts, and visualize data stored in a Supabase database.
@@ -14,6 +18,11 @@ Key features include:
 * Activity tracking (e.g., lying, sitting, walking)
 * Emergency contact management with SMS notifications
 * Data visualization (hourly, weekly, monthly views)
+
+The datasets used for training the model can be found here:
+- [FallAIID](https://ieee-dataport.org/open-access/fallalld-comprehensive-dataset-human-falls-and-activities-daily-living)
+  
+- [SisFall](https://pmc.ncbi.nlm.nih.gov/articles/PMC5298771)
 
 ## Getting Started
 
@@ -104,5 +113,5 @@ arduino/                 # Arduino Nano 33 BLE Sense code
 │   ├── main.cpp        # Main Arduino sketch
 ├── libs/               # Edge Impulse library
 
-Preprocessing/         # Preprocessing scripts for data
+dataprocessing/         # Preprocessing scripts for data
 ```
