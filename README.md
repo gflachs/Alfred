@@ -24,6 +24,7 @@ The datasets used for training the model can be found here:
   
 - [SisFall](https://pmc.ncbi.nlm.nih.gov/articles/PMC5298771)
 
+The model was trained with the platform [EdgeImpulse](https://studio.edgeimpulse.com/). The associated project can be found at: [Alfred3.0](https://studio.edgeimpulse.com/studio/654714) 
 ## Getting Started
 
 ### Prerequisites
