@@ -101,4 +101,6 @@ arduino/                 # Arduino Nano 33 BLE Sense code
 ├── src/                # Arduino source code
 │   ├── main.cpp        # Main Arduino sketch
 ├── libs/               # Edge Impulse library
+
+Preprocessing/         # Preprocessing scripts for data
 ```
