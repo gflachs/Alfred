@@ -95,7 +95,7 @@ const ActivitySummary: React.FC<ActivitySummaryProps> = ({
                   label={renderCustomizedLabel}
                   labelLine={false}
                 >
-                  {pieData.map((entry, index) => (
+                  {pieData.map((_entry, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={COLORS[index % COLORS.length]}

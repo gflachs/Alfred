@@ -2,19 +2,39 @@
 
 import { Observable } from "../utils/observable.ts";
 
+/**
+ * Eine Singleton-Klasse zur Verwaltung der Bluetooth-Verbindung und -Benachrichtigungen.
+ */
 export class BluetoothService {
-  // Typisierte Observables mit spezifischen Datentypen
+  /** Observable für den Verbindungsstatus (true = verbunden, false = getrennt) */
   private connectionStatus = new Observable<boolean>();
+
+  /** Observable für neue Werte von der Bluetooth-Charakteristik */
   private newValueObservable = new Observable<number | undefined>();
+
+  /** UUID des Bluetooth-Dienstes */
   private SERVICE_UUID: BluetoothServiceUUID = "";
+
+  /** UUID der Bluetooth-Charakteristik */
   private CHARACTERISTIC_UUID: BluetoothCharacteristicUUID =
-    "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+    "c38a205a-5dc3-4126-86d1-487028603576";
+
+  /** Das verbundene Bluetooth-Gerät */
   private device: BluetoothDevice | null = null;
+
+  /** Der GATT-Server des verbundenen Geräts */
   private server: BluetoothRemoteGATTServer | null = null;
+
+  /** Singleton-Instanz der Klasse */
   private static instance: BluetoothService;
 
+  /** Privater Konstruktor für Singleton-Pattern */
   private constructor() {}
 
+  /**
+   * Gibt die Singleton-Instanz der BluetoothService-Klasse zurück.
+   * @returns {BluetoothService} Die Singleton-Instanz
+   */
   public static getInstance(): BluetoothService {
     if (!BluetoothService.instance) {
       BluetoothService.instance = new BluetoothService();
@@ -22,10 +42,19 @@ export class BluetoothService {
     return BluetoothService.instance;
   }
 
+  /**
+   * Setzt die UUID des Bluetooth-Dienstes.
+   * @param {string} uuid - Die UUID des Dienstes
+   */
   setServiceUUID(uuid: string) {
     this.SERVICE_UUID = uuid;
   }
 
+  /**
+   * Erstellt ein Promise, das nach einem Timeout fehlschlägt.
+   * @param {number} milliseconds - Timeout in Millisekunden
+   * @returns {Promise<void>} Promise, das bei Timeout fehlschlägt
+   */
   timeoutPromise(milliseconds: number): Promise<void> {
     return new Promise((_, reject) => {
       setTimeout(() => {
@@ -38,6 +67,10 @@ export class BluetoothService {
     });
   }
 
+  /**
+   * Versucht, eine Verbindung zu einem Bluetooth-Gerät herzustellen und Benachrichtigungen zu starten.
+   * @returns {Promise<boolean>} True bei Erfolg, False bei Fehler
+   */
   async tryConnect(): Promise<boolean> {
     return navigator.bluetooth
       .requestDevice({
@@ -45,7 +78,6 @@ export class BluetoothService {
         optionalServices: [this.SERVICE_UUID],
       })
       .then(async (selectedDevice) => {
-        console.log("Gerät ausgewählt:", selectedDevice);
         this.device = selectedDevice;
         this.device.addEventListener(
           "gattserverdisconnected",
@@ -72,8 +104,6 @@ export class BluetoothService {
       })
       .then((connectedServer) => {
         this.server = connectedServer;
-        console.log("Verbunden mit dem GATT-Server:", this.server);
-        console.log(this.server.getPrimaryServices());
         return this.server.getPrimaryService(this.SERVICE_UUID);
       })
       .then((service) => service.getCharacteristic(this.CHARACTERISTIC_UUID))
@@ -85,7 +115,7 @@ export class BluetoothService {
             const value = (
               event.target as BluetoothRemoteGATTCharacteristic
             ).value?.getUint16(0, true);
-            this.newValueObservable.notify(value); // value ist number | undefined
+            this.newValueObservable.notify(value);
           }
         );
         this.connectionStatus.notify(true);
@@ -97,23 +127,35 @@ export class BluetoothService {
       });
   }
 
+  /**
+   * Trennt die Bluetooth-Verbindung, falls vorhanden.
+   */
   disconnect() {
     if (this.server && this.server.connected) {
       this.server.disconnect();
-      console.log("Disconnected from the device.");
-    } else {
-      console.log("Device is already disconnected or was never connected.");
     }
   }
 
+  /**
+   * Prüft, ob Bluetooth vom Browser unterstützt wird.
+   * @returns {boolean} True, wenn Bluetooth verfügbar ist
+   */
   isBluetoothSupported(): boolean {
     return "bluetooth" in navigator;
   }
 
+  /**
+   * Prüft, ob Bluetooth auf dem Gerät aktiviert ist.
+   * @returns {Promise<boolean>} True, wenn Bluetooth aktiviert ist
+   */
   isBluetoothEnabled(): Promise<boolean> {
     return (navigator as Navigator).bluetooth.getAvailability();
   }
 
+  /**
+   * Prüft, ob ein Bluetooth-Gerät verbunden ist.
+   * @returns {boolean} True, wenn ein Gerät verbunden ist
+   */
   isBluetoothDeviceConnected(): boolean {
     return (
       this.device !== null &&
@@ -122,29 +164,52 @@ export class BluetoothService {
     );
   }
 
+  /**
+   * Prüft, ob der Bluetooth-Service verfügbar ist.
+   * @returns {boolean} True, wenn der Service verfügbar ist
+   */
   isBluetoothServiceAvailable(): boolean {
     return this.server !== null && this.server.connected;
   }
 
+  /**
+   * Handler für das Trennen der Verbindung, benachrichtigt Observer.
+   */
   onDisconnected(): void {
-    console.log("Die Verbindung wurde getrennt!");
     this.connectionStatus.notify(false);
   }
 
-  // Typisierte Observer-Funktionen
+  /**
+   * Abonniert den Verbindungsstatus.
+   * @param {(status: boolean) => void} observer - Funktion, die bei Statusänderung aufgerufen wird
+   */
   subscribeToConnectionStatus(observer: (status: boolean) => void): void {
     this.connectionStatus.subscribe(observer);
   }
 
+  /**
+   * Entfernt ein Abonnement vom Verbindungsstatus.
+   * @param {(status: boolean) => void} observer - Funktion, die nicht mehr aufgerufen werden soll
+   */
   unsubscribeFromConnectionStatus(observer: (status: boolean) => void): void {
     this.connectionStatus.unsubscribe(observer);
   }
 
-  subscribeToNewValue(observer: (value: number | undefined) => void): void {
+  /**
+   * Abonniert neue Werte von der Bluetooth-Charakteristik.
+   * @param {(value: any | undefined) => void} observer - Funktion, die bei neuen Werten aufgerufen wird
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  subscribeToNewValue(observer: (value: any | undefined) => void): void {
     this.newValueObservable.subscribe(observer);
   }
 
-  unsubscribeFromNewValue(observer: (value: number | undefined) => void): void {
+  /**
+   * Entfernt ein Abonnement von neuen Werten.
+   * @param {(value: any | undefined) => void} observer - Funktion, die nicht mehr aufgerufen werden soll
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  unsubscribeFromNewValue(observer: (value: any | undefined) => void): void {
     this.newValueObservable.unsubscribe(observer);
   }
 }

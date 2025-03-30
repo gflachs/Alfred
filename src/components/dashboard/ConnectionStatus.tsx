@@ -1,16 +1,21 @@
 import React from "react";
-import { Box, Stack, Typography } from "@mui/material";
+import { Box, Button, Stack, Typography } from "@mui/material";
 import { Wifi as WifiIcon } from "@mui/icons-material";
+import { BluetoothService } from "../../services/bluetooth";
+
+async function connectToDevice() {
+  const bluetoothService = BluetoothService.getInstance();
+  const connected = await bluetoothService.tryConnect();
+  if (!connected) {
+    console.error("Verbindung konnte nicht hergestellt werden.");
+  }
+}
 
 interface ConnectionStatusProps {
   isConnected: boolean;
-  lastUpdated: string;
 }
 
-const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
-  isConnected,
-  lastUpdated,
-}) => {
+const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ isConnected }) => {
   return (
     <Box
       sx={{
@@ -30,10 +35,12 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
         <Typography variant="h6">
           {isConnected ? "Alfred ist verbunden" : "Alfred ist nicht verbunden"}
         </Typography>
+        {isConnected === false && (
+          <Button variant="outlined" color="primary" onClick={connectToDevice}>
+            Verbinden
+          </Button>
+        )}
       </Stack>
-      <Typography variant="body2" color="textSecondary">
-        Zuletzt aktualisiert: {lastUpdated}
-      </Typography>
     </Box>
   );
 };

@@ -11,20 +11,30 @@ import {
   IconButton,
   Divider,
   Alert,
+  CircularProgress,
+  Switch,
 } from "@mui/material";
 import { Edit, Delete } from "@mui/icons-material";
 import { sendSMS, supabase } from "../utils/supabase";
 import EmergencyAlertDialog from "../components/EmergencyAlertDialog";
+import { dataService } from "../services/dataService";
+import { EmergencyContact } from "../types/emergencyContact";
 
-interface EmergencyContact {
-  idEmergencyContact: string;
-  firstName: string;
-  lastName: string;
-  phoneNumber: string;
-  idUser: string;
+/** Props für die SettingsPage-Komponente */
+interface SettingsPageProps {
+  useMockData: boolean;
+  setUseMockData: (useMockData: boolean) => void;
 }
 
-const SettingsPage: React.FC = () => {
+/**
+ * Eine React-Komponente zur Verwaltung von Notfallkontakten und Mock-Daten-Einstellungen.
+ * @param {SettingsPageProps} props - Eigenschaften der Komponente
+ * @returns {JSX.Element} Die gerenderte Einstellungsseite
+ */
+const SettingsPage: React.FC<SettingsPageProps> = ({
+  useMockData,
+  setUseMockData,
+}) => {
   const [contacts, setContacts] = useState<EmergencyContact[]>([]);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -35,99 +45,75 @@ const SettingsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [openTestDialog, setOpenTestDialog] = useState(false);
-
-  // Authentifizierten Benutzer abrufen
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
+  // Initialisiere Datenabonnements und Benutzer-ID
   useEffect(() => {
-    const fetchUserAndContacts = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-        fetchContacts(user.id);
-      } else {
-        setError("Benutzer nicht authentifiziert. Bitte melden Sie sich an.");
-      }
-    };
-
-    fetchUserAndContacts();
-  }, []);
-
-  const fetchContacts = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("EmergencyContacts")
-      .select("*")
-      .eq("idUser", userId);
-
-    if (error) {
-      setError("Fehler beim Abrufen der Notfallkontakte: " + error.message);
-      return;
+    if (!isSubscribed) {
+      console.log("Subscribing to EmergencyContacts");
+      dataService.subscribeToData("EmergencyContacts", (data) => {
+        setContacts(data as EmergencyContact[]);
+      });
+      setIsSubscribed(true); // Verhindert Mehrfachabonnements
     }
+    if (!userId) {
+      console.log("Getting user profile");
+      dataService.getUserProfile().then((user) => {
+        if (user) {
+          setUserId(user.idUserProfile);
+        }
+      });
+    }
+  }, [isSubscribed, userId]);
 
-    setContacts(data || []);
-  };
-
+  /**
+   * Fügt einen neuen Kontakt hinzu oder aktualisiert einen bestehenden.
+   */
   const handleAddOrUpdateContact = async () => {
     if (!firstName || !lastName || !phoneNumber) {
       setError("Bitte füllen Sie alle Felder aus.");
       return;
     }
-
     if (!userId) {
       setError("Benutzer nicht authentifiziert.");
       return;
     }
 
     if (editingContact) {
-      // Bearbeiten eines bestehenden Kontakts
+      // Aktualisiere bestehenden Kontakt
       const { error } = await supabase
         .from("EmergencyContacts")
-        .update({
-          firstName,
-          lastName,
-          phoneNumber,
-        })
+        .update({ firstName, lastName, phoneNumber })
         .eq("idEmergencyContact", editingContact.idEmergencyContact);
 
       if (error) {
         setError("Fehler beim Aktualisieren des Kontakts: " + error.message);
         return;
       }
-
       setSuccess("Kontakt erfolgreich aktualisiert!");
     } else {
-      // Hinzufügen eines neuen Kontakts
-      const { error } = await supabase.from("EmergencyContacts").insert([
-        {
-          firstName,
-          lastName,
-          phoneNumber,
-          idUser: userId,
-        },
-      ]);
+      // Füge neuen Kontakt hinzu
+      const { error } = await supabase
+        .from("EmergencyContacts")
+        .insert([{ firstName, lastName, phoneNumber, idUser: userId }]);
 
       if (error) {
         setError("Fehler beim Hinzufügen des Kontakts: " + error.message);
         return;
       }
 
-      // Sende SMS an den neuen Kontakt
+      // Sende Bestätigungs-SMS an den neuen Kontakt
       const { success } = await sendSMS(
         `Hallo ${firstName} ${lastName}, Sie wurden als Notfallkontakt bei Alfred hinzugefügt.`,
         phoneNumber
       );
 
-      if (success) {
-        setSuccess(
-          "Kontakt erfolgreich hinzugefügt! Eine SMS wurde an den Kontakt gesendet."
-        );
-      } else {
-        setSuccess(
-          "Kontakt erfolgreich hinzugefügt, aber die SMS konnte nicht gesendet werden."
-        );
-      }
+      setSuccess(
+        success
+          ? "Kontakt erfolgreich hinzugefügt! Eine SMS wurde an den Kontakt gesendet."
+          : "Kontakt erfolgreich hinzugefügt, aber die SMS konnte nicht gesendet werden."
+      );
     }
 
     // Formular zurücksetzen
@@ -136,20 +122,23 @@ const SettingsPage: React.FC = () => {
     setPhoneNumber("");
     setEditingContact(null);
     setError(null);
-
-    // Kontakte neu laden
-    fetchContacts(userId);
   };
 
+  /**
+   * Öffnet den Testdialog, wenn Kontakte vorhanden sind.
+   */
   const handleTestSMS = () => {
     if (contacts.length === 0) {
       setError("Keine Notfallkontakte vorhanden, um Test-SMS zu senden.");
       return;
     }
-
     setOpenTestDialog(true);
   };
 
+  /**
+   * Bereitet einen Kontakt zum Bearbeiten vor.
+   * @param {EmergencyContact} contact - Der zu bearbeitende Kontakt
+   */
   const handleEditContact = (contact: EmergencyContact) => {
     setEditingContact(contact);
     setFirstName(contact.firstName);
@@ -157,6 +146,10 @@ const SettingsPage: React.FC = () => {
     setPhoneNumber(contact.phoneNumber);
   };
 
+  /**
+   * Löscht einen Kontakt aus der Datenbank.
+   * @param {string} idEmergencyContact - ID des zu löschenden Kontakts
+   */
   const handleDeleteContact = async (idEmergencyContact: string) => {
     const { error } = await supabase
       .from("EmergencyContacts")
@@ -167,16 +160,13 @@ const SettingsPage: React.FC = () => {
       setError("Fehler beim Löschen des Kontakts: " + error.message);
       return;
     }
-
     setSuccess("Kontakt erfolgreich gelöscht!");
     setError(null);
-
-    // Kontakte neu laden
-    if (userId) {
-      fetchContacts(userId);
-    }
   };
 
+  /**
+   * Bricht das Bearbeiten eines Kontakts ab.
+   */
   const handleCancelEdit = () => {
     setEditingContact(null);
     setFirstName("");
@@ -185,8 +175,26 @@ const SettingsPage: React.FC = () => {
     setError(null);
   };
 
+  // Zeige Ladeanimation, bis Benutzer-ID geladen ist
+  if (!userId) {
+    return <CircularProgress />;
+  }
+
   return (
     <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 600, mx: "auto" }}>
+      {/* Switch für Mock-Daten */}
+      <Typography variant="h4" gutterBottom sx={{ textAlign: "center" }}>
+        Mockdaten
+      </Typography>
+      <Stack direction="row" spacing={2} justifyContent="center">
+        <Typography variant="body1">Mockdaten verwenden</Typography>
+        <Switch
+          checked={useMockData}
+          onChange={() => setUseMockData(!useMockData)}
+        />
+      </Stack>
+
+      {/* Titel für Notfallkontakte */}
       <Typography variant="h4" gutterBottom sx={{ textAlign: "center" }}>
         Notfallkontakte
       </Typography>
@@ -284,7 +292,7 @@ const SettingsPage: React.FC = () => {
         )}
       </List>
 
-      {/* Testbutton zum Senden von Test-SMS */}
+      {/* Testbutton für SMS */}
       {contacts.length > 0 && (
         <Stack direction="row" justifyContent="center" sx={{ mt: 2 }}>
           <Button variant="outlined" color="primary" onClick={handleTestSMS}>
@@ -293,7 +301,7 @@ const SettingsPage: React.FC = () => {
         </Stack>
       )}
 
-      {/* Notfall-Alarm-Dialog */}
+      {/* Dialog für Notfalltests */}
       <EmergencyAlertDialog
         open={openTestDialog}
         onClose={() => setOpenTestDialog(false)}
