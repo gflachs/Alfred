@@ -2,6 +2,8 @@
 
 This project was developed as part of the "Big Data" module at the University of Applied Sciences for Technology and Economics (HTW) in Berlin. It is a TinyML project that demonstrates the detection of falls and Activities of Daily Living (ADL) using machine learning models and an Arduino Nano 33 BLE Sense.
 
+An deployed version of the project can be found at [https://alfred.gregorflachs.de](https://alfred.gregorflachs.de).
+
 ## Overview
 
 The project combines a PWA web application built with React and TypeScript (using Vite) with an Arduino-based TinyML solution. The Arduino Nano 33 BLE Sense collects sensor data, processes it with an Edge Impulse machine learning model, and communicates via Bluetooth Low Energy. The web app provides a user interface to monitor activities, manage emergency contacts, and visualize data stored in a Supabase database.
